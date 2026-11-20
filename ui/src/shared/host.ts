@@ -111,6 +111,9 @@ export type HostMessage =
       buildings?: boolean
       /** Whether its roads rise to their real heights. */
       roads?: boolean
+      /** How strongly TruckersMP's other players show on the map, and how large their dots are (percent). */
+      playerOpacity?: number
+      playerSize?: number
       /** The player's own tone curve (Settings › Equalizer), and whether it plays (Custom) or not (Recommended). */
       equalizer?: Equalizer
       equalizerCustom?: boolean

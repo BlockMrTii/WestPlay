@@ -2326,6 +2326,8 @@ fn settings_message(settings: &settings::Settings) -> String {
         "equalizerCustom": settings.sound.custom,
         "buildings": settings.map.buildings,
         "roads": settings.map.roads,
+        "playerOpacity": settings.map.player_opacity.get(),
+        "playerSize": settings.map.player_size.get(),
         "language": settings.language.as_ref().map(|code| code.as_str()),
     })
     .to_string()
@@ -2899,6 +2901,8 @@ mod tests {
                 "equalizerCustom": false,
                 "buildings": true,
                 "roads": true,
+                "playerOpacity": 70,
+                "playerSize": 100,
                 "language": null,
             })
         );
@@ -2907,7 +2911,11 @@ mod tests {
         settings.look.wallpaper = Some("custom:Dusk".into());
         settings.look.icon_set = Some("Retro".into());
         settings.language = crate::settings::LanguageCode::new("de_de");
+        settings.map.player_opacity = crate::settings::PlayerOpacity::new(85.0);
+        settings.map.player_size = crate::settings::PlayerSize::new(150.0);
         let message: serde_json::Value = serde_json::from_str(&settings_message(&settings)).unwrap();
+        assert_eq!(message["playerOpacity"], 85);
+        assert_eq!(message["playerSize"], 150);
         assert_eq!(message["truckStrip"], "off");
         assert_eq!(message["language"], "de_de");
         assert_eq!(message["wallpaper"], "custom:Dusk");

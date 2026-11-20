@@ -77,11 +77,22 @@ pub struct MapSettings {
     /// four fifths of the PC's memory (`westplay_mapdata::threads::FULL_SHARE`), for PCs with plenty of both
     /// (owner 2026-11-06). Off: half the processor, the memory kept low.
     pub fast: bool,
+    /// How strongly TruckersMP's other players' dots show on the map, and how large they are (issue #96).
+    #[serde(deserialize_with = "lenient")]
+    pub player_opacity: PlayerOpacity,
+    #[serde(deserialize_with = "lenient")]
+    pub player_size: PlayerSize,
 }
 
 impl Default for MapSettings {
     fn default() -> Self {
-        Self { buildings: true, roads: true, fast: false }
+        Self {
+            buildings: true,
+            roads: true,
+            fast: false,
+            player_opacity: PlayerOpacity::default(),
+            player_size: PlayerSize::default(),
+        }
     }
 }
 
@@ -390,6 +401,89 @@ impl Default for Sensitivity {
     }
 }
 
+/// How strongly TruckersMP's other players' dots show on the cab's map, in percent (issue #96). Always within
+/// [`Self::MIN`] and [`Self::MAX`]: values from a file or the companion window are rounded and corrected on the way in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(from = "f64", into = "u8")]
+pub struct PlayerOpacity(u8);
+
+impl PlayerOpacity {
+    pub const MIN: u8 = 20;
+    pub const MAX: u8 = 100;
+
+    /// Out-of-range values are clamped; anything that isn't a number is the default.
+    pub fn new(value: f64) -> Self {
+        if !value.is_finite() {
+            return Self::default();
+        }
+        Self(value.round().clamp(Self::MIN.into(), Self::MAX.into()) as u8)
+    }
+
+    pub fn get(self) -> u8 {
+        self.0
+    }
+}
+
+impl Default for PlayerOpacity {
+    fn default() -> Self {
+        Self(70)
+    }
+}
+
+impl From<f64> for PlayerOpacity {
+    fn from(value: f64) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<PlayerOpacity> for u8 {
+    fn from(value: PlayerOpacity) -> Self {
+        value.0
+    }
+}
+
+/// How large TruckersMP's other players' dots are on the cab's map, in percent of their size before it could be
+/// chosen. Always within [`Self::MIN`] and [`Self::MAX`]: values from a file or the companion window are rounded and
+/// corrected on the way in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(from = "f64", into = "u8")]
+pub struct PlayerSize(u8);
+
+impl PlayerSize {
+    pub const MIN: u8 = 50;
+    pub const MAX: u8 = 250;
+
+    /// Out-of-range values are clamped; anything that isn't a number is the default.
+    pub fn new(value: f64) -> Self {
+        if !value.is_finite() {
+            return Self::default();
+        }
+        Self(value.round().clamp(Self::MIN.into(), Self::MAX.into()) as u8)
+    }
+
+    pub fn get(self) -> u8 {
+        self.0
+    }
+}
+
+impl Default for PlayerSize {
+    fn default() -> Self {
+        Self(100)
+    }
+}
+
+impl From<f64> for PlayerSize {
+    fn from(value: f64) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<PlayerSize> for u8 {
+    fn from(value: PlayerSize) -> Self {
+        value.0
+    }
+}
+
 /// Deserializes a field, falling back to its default when the stored value doesn't fit (a typo, or a value
 /// a newer version of WestPlay wrote), instead of failing the whole file.
 fn lenient<'de, D: Deserializer<'de>, T: DeserializeOwned + Default>(deserializer: D) -> Result<T, D::Error> {
@@ -532,7 +626,13 @@ mod tests {
                 custom: true,
                 coach: CoachSpeakers::Passengers,
             },
-            map: MapSettings { buildings: false, roads: false, fast: true },
+            map: MapSettings {
+                buildings: false,
+                roads: false,
+                fast: true,
+                player_opacity: PlayerOpacity::new(85.0),
+                player_size: PlayerSize::new(150.0),
+            },
             language: LanguageCode::new("pt_br"),
         };
         let json = to_json(&settings);
@@ -542,6 +642,8 @@ mod tests {
         assert!(json.contains("\"mode\": \"toggle\""), "{json}");
         assert!(json.contains("\"truckStrip\": \"off\""), "{json}");
         assert!(json.contains("\"language\": \"pt_br\""), "{json}");
+        assert!(json.contains("\"playerOpacity\": 85"), "{json}");
+        assert!(json.contains("\"playerSize\": 150"), "{json}");
         assert_eq!(parse(&json).unwrap(), settings);
     }
 
@@ -570,6 +672,10 @@ mod tests {
         assert_eq!(partial.graphics.gpu, None);
         // And from before the map's buildings and roads could be switched: they stay on.
         assert!(partial.map.buildings && partial.map.roads);
+        let old_map = parse(r#"{"map":{"buildings":false}}"#).unwrap().map;
+        assert!(!old_map.buildings);
+        assert_eq!(old_map.player_opacity.get(), 70);
+        assert_eq!(old_map.player_size.get(), 100);
         // And from before the language could be chosen: the game's.
         assert_eq!(partial.language, None);
     }
@@ -645,6 +751,27 @@ mod tests {
         let settings = parse(r#"{"version": 2, "interaction": {"key": 192, "mode": "toggle"}}"#).unwrap();
         assert_eq!(settings.interaction.key.virtual_key(), 192);
         assert_eq!(settings.interaction.mode, InteractionMode::Toggle);
+    }
+
+    #[test]
+    fn player_markers_are_corrected_without_losing_other_map_settings() {
+        let map = parse(r#"{"map":{"buildings":false,"playerOpacity":5,"playerSize":999}}"#).unwrap().map;
+        assert!(!map.buildings);
+        assert_eq!(map.player_opacity.get(), 20);
+        assert_eq!(map.player_size.get(), 250);
+        let map = parse(r#"{"map":{"buildings":false,"playerOpacity":72.6,"playerSize":72.6}}"#).unwrap().map;
+        assert!(!map.buildings);
+        assert_eq!(map.player_opacity.get(), 73);
+        assert_eq!(map.player_size.get(), 73);
+        for (opacity, size) in [("\"x\"", "null"), ("null", "\"x\"")] {
+            let json = format!(r#"{{"map":{{"buildings":false,"playerOpacity":{opacity},"playerSize":{size}}}}}"#);
+            let map = parse(&json).unwrap().map;
+            assert!(!map.buildings);
+            assert_eq!(map.player_opacity.get(), 70);
+            assert_eq!(map.player_size.get(), 100);
+        }
+        assert_eq!(PlayerOpacity::new(f64::NAN), PlayerOpacity::default());
+        assert_eq!(PlayerSize::new(f64::NAN), PlayerSize::default());
     }
 
     #[test]

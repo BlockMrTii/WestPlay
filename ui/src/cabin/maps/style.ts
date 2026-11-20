@@ -737,21 +737,43 @@ function trafficLayers(): LayerSpecification[] {
   ]
 }
 
+/** The other players' layer. */
+export const PLAYERS_LAYER = 'players'
+
+/** The other players' dots' paint that the player chooses (issue #96: faint while driving, zoomed out): how
+ * strongly they show (`opacity`, 0..1: their fill and edge alike) and how large they are (`size`, a factor on
+ * their radius and edge at every zoom). */
+export function playerPaint(opacity: number, size: number) {
+  const radii = [9, 2.5, 13, 4, 16, 6, 18, 9]
+  const edges = [9, 1, 16, 2]
+  const scaled = (stops: number[]) =>
+    [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      ...stops.map((value, at) => (at % 2 ? value * size : value)),
+    ] as ExpressionSpecification
+  return {
+    'circle-radius': scaled(radii),
+    'circle-opacity': opacity,
+    'circle-stroke-opacity': opacity,
+    'circle-stroke-width': scaled(edges),
+  } as const
+}
+
 /** The other players' trucks: small dots in Apple's blue with a white edge, see-through so they hide nothing
- * under them (owner 2026-10-21), the same on either appearance, under the road numbers and places. */
+ * under them (owner 2026-10-21), the same on either appearance, under the road numbers and places. Their
+ * opacity and size as the player chooses them (the companion's Map page: liveMap.ts applies them). */
 function playerLayers(): LayerSpecification[] {
   return [
     {
-      id: 'players',
+      id: PLAYERS_LAYER,
       type: 'circle',
       source: PLAYERS_SOURCE,
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.5, 13, 4, 16, 6, 18, 9],
+        ...playerPaint(0.7, 1),
         'circle-color': '#0a84ff',
-        'circle-opacity': 0.7,
         'circle-stroke-color': '#ffffff',
-        'circle-stroke-opacity': 0.7,
-        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 9, 1, 16, 2],
       },
     },
   ]
@@ -983,12 +1005,16 @@ export function paintFor(appearance: Appearance, surfaces = true): { layer: stri
     ...trafficLayers(),
     ...playerLayers(),
   ]
+  // The other players' opacity and size are the player's, the same in either appearance: left as they are.
+  const chosen = new Set(Object.keys(playerPaint(1, 1)))
   return layers.flatMap((layer) =>
-    Object.entries(('paint' in layer ? layer.paint : undefined) ?? {}).map(([property, value]) => ({
-      layer: layer.id,
-      property,
-      value,
-    })),
+    Object.entries(('paint' in layer ? layer.paint : undefined) ?? {})
+      .filter(([property]) => layer.id !== PLAYERS_LAYER || !chosen.has(property))
+      .map(([property, value]) => ({
+        layer: layer.id,
+        property,
+        value,
+      })),
   )
 }
 

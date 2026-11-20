@@ -1,11 +1,25 @@
 import { useContext, useState } from 'react'
 import { hvtMapMessage } from '../../cabin/maps/blockedMap'
-import { Button, Checking, Group, MapProgress, mapOf, Note, Panel, ProfileRow, Row, Switch, Tick } from '../room/parts'
+import {
+  Button,
+  Checking,
+  Group,
+  MapProgress,
+  mapOf,
+  Note,
+  Panel,
+  ProfileRow,
+  Row,
+  Slider,
+  Switch,
+  Tick,
+} from '../room/parts'
 import { GAME_NAMES, type ProfileCheck, prepareMapsAgain } from '../setup'
 import { banner, WordsContext } from '../room/room'
 import { GLOW, ON_SCREEN, useScreenAt, useTour } from '../room/screen'
 import { list, percent } from '../onboarding/words'
 import type { ProfileMap } from '../useHostStatus'
+import { PLAYER_OPACITY, PLAYER_SIZE } from '../useSettings'
 import { memoryNote, type PageProps, useGameCheck } from './page'
 import { type MapChoice, PrepareMapsSheet } from './PrepareMapsSheet'
 
@@ -187,6 +201,22 @@ export function MapPage(props: PageProps) {
               />
             }
           />
+          <PercentRow
+            saved={settings.map.playerOpacity}
+            range={PLAYER_OPACITY}
+            label={cw.map.playerOpacity}
+            detail={cw.map.playerOpacityDetail}
+            locale={words.locale}
+            save={(playerOpacity) => update({ ...settings, map: { ...settings.map, playerOpacity } })}
+          />
+          <PercentRow
+            saved={settings.map.playerSize}
+            range={PLAYER_SIZE}
+            label={cw.map.playerSize}
+            detail={cw.map.playerSizeDetail}
+            locale={words.locale}
+            save={(playerSize) => update({ ...settings, map: { ...settings.map, playerSize } })}
+          />
           <Row
             title={cw.map.fast}
             detail={cw.map.fastDetail}
@@ -266,5 +296,48 @@ export function MapPage(props: PageProps) {
         />
       )}
     </Panel>
+  )
+}
+
+/** A percent on a slider (the other players' dots: issue #96): it follows the thumb, and it's saved once it's let
+ * go. A value saved elsewhere (another window) resets it. */
+function PercentRow({
+  saved,
+  range,
+  label,
+  detail,
+  locale,
+  save,
+}: {
+  saved: number
+  range: { min: number; max: number; step: number }
+  label: string
+  detail: string
+  locale: string
+  save(value: number): void
+}) {
+  const [dragging, setDragging] = useState(saved)
+  const [lastSaved, setLastSaved] = useState(saved)
+  if (saved !== lastSaved) {
+    setLastSaved(saved)
+    setDragging(saved)
+  }
+  return (
+    <div className="ob-row cp-slider-row">
+      <span className="ob-row-text">
+        <b>{label}</b>
+        <span>{detail}</span>
+      </span>
+      <span className="ob-row-value">{new Intl.NumberFormat(locale, { style: 'percent' }).format(dragging / 100)}</span>
+      <Slider
+        value={dragging}
+        min={range.min}
+        max={range.max}
+        step={range.step}
+        label={label}
+        change={setDragging}
+        commit={save}
+      />
+    </div>
   )
 }

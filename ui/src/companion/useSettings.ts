@@ -38,11 +38,14 @@ export interface Settings {
     custom: boolean
     coach: CoachSpeakers
   }
-  /** The cab's map: whether its buildings rise from it, and its bridges and ramps; and whether the maps are
-   * prepared faster (every processor thread, up to 80% of the memory). */
+  /** The cab's map: whether its buildings rise from it, and its bridges and ramps; how strongly TruckersMP's
+   * other players show on it and how large their dots are (percent: `PLAYER_OPACITY`, `PLAYER_SIZE`); and
+   * whether the maps are prepared faster (every processor thread, up to 80% of the memory). */
   map: {
     buildings: boolean
     roads: boolean
+    playerOpacity: number
+    playerSize: number
     fast: boolean
   }
   /** The language WestPlay speaks in the cab and here: one of the game's (`de_de`), or `null`: the game's. */
@@ -93,6 +96,11 @@ export interface Binding {
 
 /** Mirrors `westplay_host::settings::Sensitivity` (the app corrects anything outside it). */
 export const SENSITIVITY = { min: 0.5, max: 3, step: 0.1 }
+
+/** The other players' dots on the map (`westplay_host::settings::PlayerOpacity`, `PlayerSize`): percent, of
+ * fully opaque and of their size before it could be chosen. */
+export const PLAYER_OPACITY = { min: 20, max: 100, step: 5 }
+export const PLAYER_SIZE = { min: 50, max: 250, step: 10 }
 
 export interface SettingsState {
   /** `null` until loaded. */

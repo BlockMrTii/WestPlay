@@ -133,6 +133,10 @@ export const words: CompanionWords = {
     buildingsDetail: 'Az épületek kiemelkednek a térképből.',
     roads: '3D utak',
     roadsDetail: 'A hidak és a felhajtók a valódi magasságukig emelkednek.',
+    playerOpacity: 'Játékosok átlátszatlansága',
+    playerOpacityDetail: 'Mennyire tisztán látszanak a többi TruckersMP-játékos a térképen.',
+    playerSize: 'Játékosok mérete',
+    playerSizeDetail: 'Mekkora méretűek a többi TruckersMP-játékos pontjai a térképen.',
     fast: 'Gyorsabb térképelkészítés',
     fastDetail:
       'A teljes processzort és a memória akár 80%-át használja. Olyan gépekhez, amelyekben mindkettőből bőven van.',
