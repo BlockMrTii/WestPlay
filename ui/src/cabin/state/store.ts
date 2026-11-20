@@ -65,6 +65,7 @@ import type { OemMode } from './oem'
 import { INITIAL_POWER, power, type PowerEvent, type PowerState } from './power'
 import { isScreenLayoutId, type ScreenLayoutId } from './screen'
 import { DEFAULT_TEXT_SIZE, STEPS_ADDED_BELOW, toTextSize } from './textSize'
+import { PLAYER_DOTS, shareOf } from '../maps/playerDots'
 
 /** The Dashboard's widgets the player can turn off (turn-by-turn always shows while there's a route). */
 export type DashboardWidget = 'nowPlaying' | 'destination' | 'weather'
@@ -99,6 +100,10 @@ interface CabinState {
   mapBuildings: boolean
   /** Whether its roads rise to their real heights, as set there too. */
   mapRoads: boolean
+  /** How strongly TruckersMP's other players show on the map (0..1) and how large their dots are (a factor on
+   * their size), as set there too. */
+  mapPlayerOpacity: number
+  mapPlayerSize: number
   /** The player's own tone curve (Settings › Equalizer), and whether it plays (Custom) or the speakers as tuned
    * (Recommended, flat): kept with WestPlay's settings, the host sends them. */
   equalizer: Equalizer
@@ -169,6 +174,8 @@ export const useCabin = create<CabinState>()(
       oemMode: 'auto',
       mapBuildings: true,
       mapRoads: true,
+      mapPlayerOpacity: PLAYER_DOTS.opacity.fallback,
+      mapPlayerSize: PLAYER_DOTS.size.fallback,
       equalizer: FLAT,
       equalizerCustom: false,
       brightness: 1,
@@ -556,6 +563,8 @@ function receiveHostMessage(now: () => number): (message: HostMessage) => void {
           equalizerCustom: message.equalizerCustom === true,
           mapBuildings: message.buildings !== false,
           mapRoads: message.roads !== false,
+          mapPlayerOpacity: shareOf(message.playerOpacity, PLAYER_DOTS.opacity),
+          mapPlayerSize: shareOf(message.playerSize, PLAYER_DOTS.size),
         })
         useLive.setState({ chosenLanguage: typeof message.language === 'string' ? message.language : null })
         setIcons({

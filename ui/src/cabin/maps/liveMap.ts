@@ -52,6 +52,8 @@ import {
 import {
   BUILDING_FLAT_LAYER,
   BUILDING_LAYER,
+  PLAYERS_LAYER,
+  playerPaint,
   MAP_SOURCE,
   SURFACE_SOURCE,
   mapStyle,
@@ -388,6 +390,9 @@ function create(data: MapData, appearance: Appearance): LiveMap {
       meshes?.setShown(state.mapBuildings)
     }
     if (state.mapRoads !== before.mapRoads) raised?.setShown(state.mapRoads)
+    if (state.mapPlayerOpacity !== before.mapPlayerOpacity || state.mapPlayerSize !== before.mapPlayerSize) {
+      showPlayers(map)
+    }
     if (state.textSize === before.textSize) return
     clearTimeout(resized)
     resized = setTimeout(() => {
@@ -398,7 +403,10 @@ function create(data: MapData, appearance: Appearance): LiveMap {
       }
     }, TEXT_SIZE_SETTLE_MS)
   })
-  map.once('style.load', () => showBuildings(map))
+  map.once('style.load', () => {
+    showBuildings(map)
+    showPlayers(map)
+  })
   listen(created)
   restoreView(created)
   return created
@@ -410,6 +418,15 @@ function showBuildings(map: maplibregl.Map) {
   const raised = useCabin.getState().mapBuildings
   map.setLayoutProperty(BUILDING_LAYER, 'visibility', raised ? 'visible' : 'none')
   map.setLayoutProperty(BUILDING_FLAT_LAYER, 'visibility', raised ? 'none' : 'visible')
+}
+
+/** TruckersMP's other players' dots as strong and as large as the player has them (the companion's Map page). */
+function showPlayers(map: maplibregl.Map) {
+  if (!map.getLayer(PLAYERS_LAYER)) return
+  const { mapPlayerOpacity, mapPlayerSize } = useCabin.getState()
+  for (const [property, value] of Object.entries(playerPaint(mapPlayerOpacity, mapPlayerSize))) {
+    map.setPaintProperty(PLAYERS_LAYER, property, value)
+  }
 }
 
 /** How often the view is looked at to be kept, ms. */

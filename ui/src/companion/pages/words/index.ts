@@ -140,6 +140,12 @@ export interface CompanionWords {
     /** The switch for the map's roads at their real heights. */
     roads: string
     roadsDetail: string
+    /** The slider for how strongly TruckersMP's other players show on the map. */
+    playerOpacity: string
+    playerOpacityDetail: string
+    /** The slider for how large their dots are. */
+    playerSize: string
+    playerSizeDetail: string
     /** The switch for preparing the maps on the whole processor and up to 80% of the memory. */
     fast: string
     fastDetail: string

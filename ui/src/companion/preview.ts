@@ -84,7 +84,7 @@ let settings: Settings = {
   look: { wallpaper: null, iconSet: null, iconStyle: 'auto' },
   graphics: { gpu: null },
   sound: { equalizer: { bass: 0, mid: 0, treble: 0 }, custom: false, coach: 'driver' },
-  map: { buildings: true, roads: true, fast: false },
+  map: { buildings: true, roads: true, playerOpacity: 70, playerSize: 100, fast: false },
   language: null,
 }
 
